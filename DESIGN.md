@@ -512,6 +512,12 @@ Result:
 - later inbound firewall and delivery hooks still run in the same netns as the intercepted fake-TCP packet
 - translated UDP avoids the raw-UDP drop hook because the reinjection mark is consumed by that hook
 
+#### IPv4 reverse-path filtering
+
+Reinjected UDP retains the fake-TCP packet's ingress device. With strict IPv4 `rp_filter=1`, policy routing may resolve the UDP peer through a tunnel instead of that ingress device and drop the packet before local delivery. IPv6 has no kernel `rp_filter` equivalent, although firewall-based reverse-path checks can impose the same constraint.
+
+The module does not change host source-validation policy; deployments must use loose RPF or an explicit WireGuard peer rule.
+
 ### 8.5 Generated fake-TCP transmission
 
 For module-generated fake-TCP packets:

@@ -347,6 +347,31 @@ sudo modprobe phantun
 | **Shaping semantics** | `handshake_request` / `handshake_response` are hints, not a verified sub-protocol. |
 | **Keepalive** | `phantun-dkms` has TCP-like keepalive behavior; that is another reason mixed Phantun / `phantun-dkms` endpoints should not be assumed to interoperate. |
 
+### IPv4 reverse-path filtering
+
+Decapsulated UDP is reinjected on the fake-TCP ingress interface. On a policy-routed WireGuard client, strict IPv4 reverse-path filtering (`rp_filter=1`) drops it when the peer's reverse route selects the WireGuard interface instead of the physical underlay. IPv6 has no kernel `rp_filter` equivalent, although firewall-based reverse-path checks can impose the same constraint.
+
+Use one of these methods:
+
+1. **Use loose RPF on the underlay interface.** This is the recommended general solution for asymmetric or dynamic client routing:
+
+   ```text
+   net.ipv4.conf.<underlay-interface>.rp_filter = 2
+   ```
+
+   Linux uses the maximum of `all` and the interface setting, so this keeps other interfaces strict when `all` remains `0` or `1`. Persist the setting through the host's network or sysctl configuration.
+
+2. **Keep strict RPF and add an explicit WireGuard peer rule.** Route the UDP reverse lookup through the underlay before the full-tunnel policy rule:
+
+   ```bash
+   ip -4 rule add pref <priority> \
+     to <peer-ipv4> ipproto udp dport <peer-port> lookup main
+   ```
+
+   The `main` table must route the peer over the physical underlay. Update the rule when the endpoint changes. This also routes matching raw WireGuard UDP through `main` if phantun is absent; add a fail-closed OUTPUT rule when that fallback is not acceptable.
+
+phantun does not modify `rp_filter`; source-validation policy remains under operator control.
+
 ## Runtime stats
 
 The module exports counters under:
