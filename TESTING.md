@@ -1,5 +1,7 @@
 # End-to-end testing with virtme-ng
 
+**Language**: English | [简体中文](TESTING.zh-CN.md)
+
 The integration tests use `pytest` and `virtme-ng` (vng). `virtme-ng` boots a QEMU virtual machine utilizing either the host kernel or a cached Ubuntu mainline kernel, while using a Copy-on-Write (COW) overlay of the host filesystem.
 
 ## Prerequisites

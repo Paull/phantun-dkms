@@ -1,5 +1,7 @@
 # phantun-dkms
 
+**Language**: English | [简体中文](README.zh-CN.md)
+
 [![Latest Release](https://img.shields.io/github/v/release/bjin/phantun-dkms.svg?display_name=release)](https://github.com/bjin/phantun-dkms/releases/latest)
 [![GitHub branch status](https://github.com/bjin/phantun-dkms/actions/workflows/ci.yml/badge.svg)](https://github.com/bjin/phantun-dkms/actions/workflows/ci.yml)
 
