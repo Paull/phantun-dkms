@@ -1,0 +1,126 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2024 Bin Jin <bjin@protonmail.com>
+#
+# Renders /etc/config/phantun into modprobe options for the phantun kernel
+# module and (re)loads the module. phantun itself is a pure kernel module
+# with no daemon, so this is a plain rc.common script rather than a procd
+# service: start/stop only load/unload the module.
+
+START=19
+STOP=91
+
+MODPROBE_CONF=/etc/modprobe.d/phantun.conf
+
+. /lib/functions.sh
+
+_csv_append() {
+	# $1: value to append, $2: name of the CSV accumulator variable
+	local val="$1"
+	local var="$2"
+	local cur
+	eval "cur=\$$var"
+	eval "$var=\"${cur:+$cur,}\$val\""
+}
+
+_quote_if_needed() {
+	# Wrap $1 in double quotes if it contains whitespace, quotes or is empty.
+	case "$1" in
+		*[\ \	\"\\]*|"")
+			echo "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/' -e 's/$/"/'
+			;;
+		*)
+			echo "$1"
+			;;
+	esac
+}
+
+_append_param() {
+	# $1: module parameter name, $2: value (skipped when empty)
+	[ -n "$2" ] || return 0
+	params="$params $1=$(_quote_if_needed "$2")"
+}
+
+build_modprobe_conf() {
+	local enabled
+	config_get_bool enabled global enabled 0
+	[ "$enabled" = "1" ] || return 1
+
+	local local_ports="" remote_peers="" raw_params=""
+	config_list_foreach global managed_local_ports _csv_append local_ports
+	config_list_foreach global managed_remote_peers _csv_append remote_peers
+
+	params=""
+	_append_param managed_local_ports "$local_ports"
+	_append_param managed_remote_peers "$remote_peers"
+
+	local reserved_local_ports ip_families managed_netns
+	local handshake_request handshake_response
+	local handshake_timeout_ms handshake_retries
+	local keepalive_interval_sec keepalive_misses
+	local hard_idle_timeout_sec reopen_guard_bytes half_open_limit
+	local replacement_quarantine_ms replacement_protect_ms
+
+	config_get reserved_local_ports global reserved_local_ports
+	config_get ip_families global ip_families
+	config_get managed_netns global managed_netns
+	config_get handshake_request global handshake_request
+	config_get handshake_response global handshake_response
+	config_get handshake_timeout_ms global handshake_timeout_ms
+	config_get handshake_retries global handshake_retries
+	config_get keepalive_interval_sec global keepalive_interval_sec
+	config_get keepalive_misses global keepalive_misses
+	config_get hard_idle_timeout_sec global hard_idle_timeout_sec
+	config_get reopen_guard_bytes global reopen_guard_bytes
+	config_get half_open_limit global half_open_limit
+	config_get replacement_quarantine_ms global replacement_quarantine_ms
+	config_get replacement_protect_ms global replacement_protect_ms
+
+	_append_param reserved_local_ports "$reserved_local_ports"
+	_append_param ip_families "$ip_families"
+	_append_param managed_netns "$managed_netns"
+	_append_param handshake_request "$handshake_request"
+	_append_param handshake_response "$handshake_response"
+	_append_param handshake_timeout_ms "$handshake_timeout_ms"
+	_append_param handshake_retries "$handshake_retries"
+	_append_param keepalive_interval_sec "$keepalive_interval_sec"
+	_append_param keepalive_misses "$keepalive_misses"
+	_append_param hard_idle_timeout_sec "$hard_idle_timeout_sec"
+	_append_param reopen_guard_bytes "$reopen_guard_bytes"
+	_append_param half_open_limit "$half_open_limit"
+	_append_param replacement_quarantine_ms "$replacement_quarantine_ms"
+	_append_param replacement_protect_ms "$replacement_protect_ms"
+
+	config_list_foreach global raw_kernel_parameters _csv_append raw_params
+	if [ -n "$raw_params" ]; then
+		params="$params $(echo "$raw_params" | tr ',' ' ')"
+	fi
+
+	[ -n "$local_ports" ] || [ -n "$remote_peers" ] || [ -n "$raw_params" ] || {
+		echo "phantun: enabled but no managed_local_ports, managed_remote_peers or raw_kernel_parameters set; not loading" >&2
+		return 1
+	}
+
+	mkdir -p "$(dirname "$MODPROBE_CONF")"
+	echo "options phantun$params" > "$MODPROBE_CONF"
+	return 0
+}
+
+start() {
+	config_load phantun
+	rmmod phantun 2>/dev/null
+	if build_modprobe_conf; then
+		modprobe phantun
+	else
+		rm -f "$MODPROBE_CONF"
+	fi
+}
+
+stop() {
+	rmmod phantun 2>/dev/null
+	rm -f "$MODPROBE_CONF"
+}
+
+restart() {
+	stop
+	start
+}

@@ -145,6 +145,29 @@ Set `services.phantun.managedNetns = "all";` when the managed application intent
 
 The `nixpkgs.follows` line makes this module use the consumer flake's `nixpkgs` input instead of keeping a second transitive `nixpkgs` pinned by this repository.
 
+### Build for OpenWrt (24.10+)
+
+Copy or symlink `openwrt-package/` into an OpenWrt buildroot/SDK as `package/phantun`, then:
+
+```bash
+./scripts/feeds update -a && ./scripts/feeds install -a   # if used as a feed
+make menuconfig   # enable Kernel modules -> Network Support -> kmod-phantun
+make package/phantun/compile V=s
+```
+
+`kmod-phantun` installs a default (disabled) `/etc/config/phantun` UCI file and
+`/etc/init.d/phantun`, which renders the UCI options into `/etc/modprobe.d/phantun.conf`
+and (re)loads the module. Set `option enabled '1'` plus at least one of
+`list managed_local_ports` or `list managed_remote_peers`, then run:
+
+```bash
+uci commit phantun
+/etc/init.d/phantun enable
+/etc/init.d/phantun restart
+```
+
+See `openwrt-package/files/phantun.config` for the full list of supported options.
+
 
 ### Simplest load: own one local UDP port
 
