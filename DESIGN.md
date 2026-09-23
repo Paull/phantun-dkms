@@ -1,5 +1,7 @@
 # phantun-dkms design
 
+**Language**: English | [简体中文](DESIGN.zh-CN.md)
+
 This document covers **internal design decisions** and **protocol behavior**.
 For installation, everyday configuration, examples, stats, MTU guidance, and operational notes, use [**`README.md`**](./README.md).
 
