@@ -18,12 +18,18 @@ PKG_NAME:=phantun
 PKG_VERSION:=0.4.3.1
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-dkms-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/bjin/phantun-dkms/archive/refs/tags
-PKG_SOURCE_URL_FILE:=v$(PKG_VERSION).tar.gz
-PKG_HASH:=f94724098d5a4f1ce689359df8e544fe7a1ec93b5827aa8f5801d40e2d91a2f2
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/Paull/phantun-dkms.git
+PKG_SOURCE_DATE:=2026-09-23
+PKG_SOURCE_VERSION:=7a5fb487e4d48e298031ff3e5702d160d1e3f30e
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+# Paull/phantun-dkms has no tagged releases yet, so the source is fetched
+# straight from a pinned commit instead of a release tarball; there is no
+# stable per-release hash to pin against.
+PKG_MIRROR_HASH:=skip
 
-PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-dkms-$(PKG_VERSION)
+PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_MAINTAINER:=Bin Jin <bjin@protonmail.com>
 PKG_LICENSE:=GPL-2.0-or-later
@@ -37,7 +43,7 @@ include $(INCLUDE_DIR)/package.mk
 define KernelPackage/phantun
   SUBMENU:=Network Support
   TITLE:=Phantun fake-TCP transport for UDP applications
-  URL:=https://github.com/bjin/phantun-dkms
+  URL:=https://github.com/Paull/phantun-dkms
   FILES:=$(PKG_BUILD_DIR)/phantun.ko
   AUTOLOAD:=$(call AutoProbe,phantun)
 endef
