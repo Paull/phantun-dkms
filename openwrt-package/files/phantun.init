@@ -10,16 +10,45 @@ START=19
 STOP=91
 
 MODPROBE_CONF=/etc/modprobe.d/phantun.conf
+KMOD=/lib/modules/$(uname -r)/phantun.ko
 
 . /lib/functions.sh
+
+# Newline used below to detect embedded newlines in UCI values; kept as a
+# variable because busybox ash has no $'\n' literal syntax.
+_NL='
+'
+
+_is_unsafe_value() {
+	# $1: value. Rejects shell metacharacters that must never be trusted
+	# blindly: backticks/"$" could enable command substitution if this
+	# string is ever re-parsed (directly or via eval), ";"/newline could
+	# terminate a command early or corrupt the single-line modprobe.d
+	# config we render below.
+	case "$1" in
+		*"$_NL"*|*'`'*|*'$'*|*';'*)
+			return 0
+			;;
+	esac
+	return 1
+}
 
 _csv_append() {
 	# $1: value to append, $2: name of the CSV accumulator variable
 	local val="$1"
 	local var="$2"
 	local cur
-	eval "cur=\$$var"
-	eval "$var=\"${cur:+$cur,}\$val\""
+	if _is_unsafe_value "$val"; then
+		echo "phantun: refusing value with unsafe characters for $var: $val" >&2
+		unsafe_config=1
+		return 1
+	fi
+	# Read the accumulator indirectly (var name is always one of our own
+	# trusted literals, never user data, so this eval is safe); the write
+	# below uses "export name=value" instead of eval so that $val itself
+	# is never re-parsed as shell code.
+	cur="$(eval "echo \"\$$var\"")"
+	export "$var=${cur:+$cur,}$val"
 }
 
 _quote_if_needed() {
@@ -37,6 +66,11 @@ _quote_if_needed() {
 _append_param() {
 	# $1: module parameter name, $2: value (skipped when empty)
 	[ -n "$2" ] || return 0
+	if _is_unsafe_value "$2"; then
+		echo "phantun: refusing value with unsafe characters for $1: $2" >&2
+		unsafe_config=1
+		return 1
+	fi
 	params="$params $1=$(_quote_if_needed "$2")"
 }
 
@@ -44,6 +78,8 @@ build_modprobe_conf() {
 	local enabled
 	config_get_bool enabled global enabled 0
 	[ "$enabled" = "1" ] || return 1
+
+	unsafe_config=0
 
 	local local_ports="" remote_peers="" raw_params=""
 	config_list_foreach global managed_local_ports _csv_append local_ports
