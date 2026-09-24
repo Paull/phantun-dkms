@@ -146,6 +146,29 @@ inputs.phantun-dkms = {
 
 `nixpkgs.follows` 这一行使该模块使用使用者 flake 的 `nixpkgs` 输入，而不是继续保留本仓库所固定的第二份传递性 `nixpkgs`。
 
+### 为 OpenWrt 构建（24.10+）
+
+将 `openwrt-package/` 复制或软链接到 OpenWrt buildroot/SDK 中，作为 `package/phantun`，然后：
+
+```bash
+./scripts/feeds update -a && ./scripts/feeds install -a   # 如果作为 feed 使用
+make menuconfig   # 在 Kernel modules -> Network Support 中启用 kmod-phantun
+make package/phantun/compile V=s
+```
+
+`kmod-phantun` 会安装一份默认（已禁用）的 `/etc/config/phantun` UCI 配置文件，以及
+`/etc/init.d/phantun`，后者会把 UCI 选项渲染到 `/etc/modprobe.d/phantun.conf`
+并（重新）加载模块。设置 `option enabled '1'`，并至少配置
+`list managed_local_ports` 或 `list managed_remote_peers` 之一，然后运行：
+
+```bash
+uci commit phantun
+/etc/init.d/phantun enable
+/etc/init.d/phantun restart
+```
+
+完整的可用选项列表见 `openwrt-package/files/phantun.config`。
+
 ### 最简单的加载方式：接管一个本地 UDP 端口
 
 ```bash

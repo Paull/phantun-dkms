@@ -10,6 +10,7 @@ This repo builds a Linux kernel module that runs Phantun-style fake-TCP in-kerne
 - `flake.nix`, `flake.lock`: Nix flake outputs for building the module and exporting the NixOS module; keep in sync with Nix packaging/module changes
 - `nix/package.nix`: Nix derivation for building `phantun.ko` against a passed `kernel`
 - `nix/nixos-module.nix`: NixOS module for typed `services.phantun` options, modprobe parameter rendering, and boot-time loading
+- `openwrt-package/`: OpenWrt (24.10+) package `Makefile` (`kmod-phantun`) and `files/` (UCI config, `/etc/init.d/phantun` modprobe-options renderer)
 - `prepare-kernels.py`: CLI to download/verify Ubuntu mainline kernels for matrix testing
 - `DESIGN.md`: protocol/design notes
 - `TESTING.md`: detailed integration testing instructions
